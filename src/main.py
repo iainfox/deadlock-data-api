@@ -64,6 +64,7 @@ def _run_item_extraction(args):
 def _run_all(args):
     from steam.tracker import main as tracker_main
     from items.extract import run as extract_items
+    from items.extract import main as extract_main
     from steam.settings import DOWNLOAD_DIR
 
     sys.argv = [sys.argv[0], "--extract-items"]
@@ -74,10 +75,18 @@ def _run_all(args):
     tracker_main()
 
     data_dirs = _find_game_data_dirs(DOWNLOAD_DIR)
+    if not data_dirs:
+        data_dirs = _find_game_data_dirs(Path.cwd())
+    if not data_dirs:
+        data_dirs = _find_game_data_dirs(Path.cwd() / "data")
+
     if data_dirs:
         for data_dir in data_dirs:
             print(f"\nExtracting items from: {data_dir}")
             extract_items(str(data_dir), args.items_output)
+    else:
+        print("No extracted game data found. Run with --force to download, or point")
+        print("extract-items --data-dir at an existing depot download directory.")
 
 
 def _find_game_data_dirs(download_base):
