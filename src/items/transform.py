@@ -1,17 +1,12 @@
-"""Turns a raw parsed ability/item dict (from kv3_parser) into the clean,
-JSON-serializable item record used in items_data.json.
-"""
-
 import re
 
 from config import PROMOTED_STAT_KEYS, SLOT_DISPLAY_NAMES, TIER_PRICES
-from kv3_parser import parse_simple_value
+from utils.kv3_parser import parse_simple_value
 
 _TIER_DIGIT_RE = re.compile(r'(\d+)')
 
 
 def get_str_list(value):
-    """Normalize a KV3 value that may be a single string or a list of strings."""
     if isinstance(value, list):
         return value
     if isinstance(value, str):
@@ -20,8 +15,6 @@ def get_str_list(value):
 
 
 def extract_stats(item):
-    """Return {stat_name: {'value': ..., 'usage': ...}} from an item's
-    m_mapAbilityProperties map."""
     props = item.get('m_mapAbilityProperties', {})
     if not isinstance(props, dict):
         return {}
@@ -37,7 +30,6 @@ def extract_stats(item):
 
 
 def parse_tier(item):
-    """Extract the numeric tier from m_iItemTier (e.g. 'EItemTier_2' -> 2)."""
     tier_match = _TIER_DIGIT_RE.search(str(item.get('m_iItemTier', '')))
     return int(tier_match.group(1)) if tier_match else 0
 
@@ -52,7 +44,6 @@ def determine_slot(item):
 
 
 def determine_availability(item):
-    """Classify an item as main_game / street_brawl / in_dev."""
     disabled = str(item.get('m_bDisabled', '')).lower() in ('true', '1')
     not_pickable = item.get('_not_pickable', 0)
     is_street_brawl = 'ERequirementStreetBrawl' in str(item.get('m_eAbilityRequirements', ''))
@@ -65,7 +56,6 @@ def determine_availability(item):
 
 
 def extract_passive_property_names(item):
-    """Property names auto-registered by the item's intrinsic modifiers."""
     intrinsics = item.get('m_AutoIntrinsicModifiers', [])
     if isinstance(intrinsics, dict):
         intrinsics = [intrinsics]
@@ -80,7 +70,6 @@ def extract_passive_property_names(item):
 
 
 def extract_active_property_names(item):
-    """Property names auto-registered by the item's active buff/caster modifier."""
     modifier = item.get('m_BuffModifier') or item.get('m_CasterModifier')
     if not isinstance(modifier, dict):
         return set()
@@ -90,7 +79,6 @@ def extract_active_property_names(item):
 
 
 def extract_upgrades(item):
-    """Return a list of {property_name: bonus_value} dicts, one per upgrade tier."""
     upgrades = item.get('m_vecAbilityUpgrades', [])
     if isinstance(upgrades, dict):
         upgrades = [upgrades]
@@ -118,8 +106,6 @@ def extract_upgrades(item):
 
 
 def extract_tooltip_descriptions(item, descriptions):
-    """Resolve tooltip section attributes (#loc_key references) against
-    the localization dict, returning [{'section': ..., 'description': ...}]."""
     sections = item.get('m_vecTooltipSectionInfo', [])
     if isinstance(sections, dict):
         sections = [sections]
@@ -149,7 +135,6 @@ def extract_tooltip_descriptions(item, descriptions):
 
 
 def build_clean_stats(stats):
-    """Convert extract_stats() output into the clean per-item 'stats' field."""
     clean_stats = {}
     for name, definition in stats.items():
         if not isinstance(definition, dict):
@@ -163,7 +148,6 @@ def build_clean_stats(stats):
 
 
 def build_item_record(item_id, item, names, descriptions):
-    """Build the full clean output record for a single item."""
     tier = parse_tier(item)
     stats = extract_stats(item)
 

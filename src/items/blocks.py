@@ -1,14 +1,11 @@
-"""Locates top-level ``upgrade_*`` item definitions inside a .vdata file."""
-
 import re
 
-from kv3_parser import extract_balanced
+from utils.kv3_parser import extract_balanced
 
 _ITEM_HEADER_RE = re.compile(r'(upgrade_[a-zA-Z0-9_/]+)\s*=\s*(\{?)')
 
 
 def extract_item_blocks(filepath):
-    """Return {item_id: raw_kv3_object_text} for every upgrade_* entry in filepath."""
     content = _read_stripping_bom(filepath)
     lines = content.split('\n')
 
@@ -33,11 +30,6 @@ def _read_stripping_bom(filepath):
 
 
 def _consume_item_block(lines, i, match, items):
-    """Extract the {...} body following an item header and record it.
-
-    Handles both ``name = {`` on one line and ``name =`` / ``{`` on
-    consecutive lines. Returns the index of the next line to process.
-    """
     name, opener_on_same_line = match.group(1), match.group(2)
 
     if opener_on_same_line == '{':

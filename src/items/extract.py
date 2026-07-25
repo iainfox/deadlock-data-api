@@ -1,22 +1,18 @@
-"""Extracts item/ability data from abilities.vdata into items_data.json.
-
-Pipeline:
-    1. Load localization files (display names + descriptions).
-    2. Pull raw `upgrade_*` KV3 blocks out of abilities.vdata (item_blocks).
-    3. Parse each raw block into a Python dict (kv3_parser).
-    4. Transform each parsed dict into the clean output schema (item_transform).
-    5. Write the result to items_data.json and print a summary.
-"""
-
+import argparse
 import json
 import os
+import sys as _sys
+from pathlib import Path
 
-from config import Paths, TIER_PRICES, find_repo_dir
-from item_blocks import extract_item_blocks
-from item_transform import build_item_record
-from kv3_parser import parse_kv3_obj
-from steam_localization import parse_steam_localization
-from summary import summarize
+if __name__ == '__main__' and not __package__:
+    _sys.path.insert(0, str(Path(__file__).parent.parent))
+
+from config import Paths, TIER_PRICES
+from items.blocks import extract_item_blocks
+from items.transform import build_item_record
+from items.summary import summarize
+from utils.kv3_parser import parse_kv3_obj
+from utils.localization import parse_steam_localization
 
 
 def load_localization(paths):
@@ -27,10 +23,6 @@ def load_localization(paths):
 
 
 def load_parsed_items(paths):
-    """Extract and parse every item block from abilities.vdata.
-
-    Parse failures are logged and skipped rather than aborting the run.
-    """
     raw_blocks = extract_item_blocks(paths.abilities)
     print(f"Found {len(raw_blocks)} items")
 
@@ -65,18 +57,21 @@ def write_output(output, out_path):
         json.dump(output, f, indent=2, ensure_ascii=False)
 
 
-def main():
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    repo_dir = find_repo_dir(script_dir)
-    paths = Paths(repo_dir)
+def run(data_dir, output_path=None):
+    if output_path is None:
+        output_path = os.path.join(os.getcwd(), 'items_data.json')
 
-    print(f"Loading: {paths.abilities}")
+    paths = Paths(data_dir, output_path)
+
+    print(f"Abilities: {paths.abilities}")
+    print(f"Names: {paths.mod_names}")
+    print(f"Descriptions: {paths.mod_descriptions}")
 
     names, descriptions = load_localization(paths)
     items = load_parsed_items(paths)
     output = build_output(items, names, descriptions)
-
     write_output(output, paths.output_json)
+
     print(f"\nOutput: {paths.output_json}")
     print(f"Items: {len(output['items'])}")
 
@@ -84,6 +79,27 @@ def main():
     print(f"Tiers: {tiers}")
     print(f"Slots: {slots}")
     print(f"Activation: {activations}")
+
+    return output
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Extract item data from Deadlock game files.")
+    parser.add_argument("--data-dir", help="Path to extracted game data directory (depot download dir)")
+    parser.add_argument("--output", help="Path to write items_data.json")
+    args = parser.parse_args()
+
+    data_dir = args.data_dir
+    if not data_dir:
+        tracker_dir = os.environ.get("DEADLOCK_TRACKER_DIR")
+        if tracker_dir:
+            depots_dir = Path(tracker_dir) / "depots"
+            if depots_dir.exists():
+                data_dir = str(depots_dir)
+    if not data_dir:
+        data_dir = os.getcwd()
+
+    run(data_dir, args.output)
 
 
 if __name__ == '__main__':
