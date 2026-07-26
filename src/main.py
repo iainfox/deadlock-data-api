@@ -84,35 +84,34 @@ def _run_all(args):
     from heroes.extract import run as extract_heroes
     from steam.settings import DOWNLOAD_DIR
 
-    sys.argv = [sys.argv[0], "--extract-items"]
-    if args.items_output:
-        sys.argv += ["--items-output", args.items_output]
-    if args.heroes_output:
-        sys.argv += ["--heroes-output", args.heroes_output]
+    sys.argv = [sys.argv[0]]
     if args.force:
         sys.argv.append("--force")
     tracker_main()
 
     data_dirs = _find_game_data_dirs(DOWNLOAD_DIR)
-    if data_dirs:
-        for data_dir in data_dirs:
-            print(f"\nExtracting items from: {data_dir}")
-            extract_items(str(data_dir), args.items_output)
-            print(f"\nExtracting heroes from: {data_dir}")
-            extract_heroes(str(data_dir), args.heroes_output)
+    if not data_dirs:
+        print("No game data directories found. Run with --force to download even if unchanged.")
+        return
+
+    for data_dir in data_dirs:
+        print(f"\nExtracting items from: {data_dir}")
+        extract_items(str(data_dir), args.items_output)
+        print(f"\nExtracting heroes from: {data_dir}")
+        extract_heroes(str(data_dir), args.heroes_output)
 
 
 def _find_game_data_dirs(download_base):
     if not download_base.exists():
         return []
-    dirs = []
-    for depot_dir in sorted(download_base.iterdir()):
-        if not depot_dir.is_dir():
-            continue
-        for child in depot_dir.iterdir():
-            if child.is_dir() and ((child / "scripts" / "abilities.vdata").exists() or (child / "pak01_dir" / "scripts" / "abilities.vdata").exists()):
-                dirs.append(str(child.parent))
-    return dirs
+    dirs = set()
+    for path in Path(download_base).rglob("abilities.vdata"):
+        try:
+            depot_dir_name = path.relative_to(download_base).parts[0]
+            dirs.add(str(download_base / depot_dir_name))
+        except ValueError:
+            pass
+    return sorted(dirs)
 
 if __name__ == "__main__":
     main()
