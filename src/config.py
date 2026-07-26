@@ -41,3 +41,14 @@ class Paths:
             'citadel_mods', 'citadel_mods_english.txt',
         )
         self.output_json = output_path
+
+        self.heroes = _find_file(data_dir, 'pak01_dir', 'scripts', 'heroes.vdata')
+        self.hero_names = _find_file(
+            data_dir, 'resource', 'localization',
+            'citadel_gc_hero_names', 'citadel_gc_hero_names_english.txt',
+        )
+        self.hero_abilities = _find_file(
+            data_dir, 'resource', 'localization',
+            'citadel_heroes', 'citadel_heroes_english.txt',
+        )
+        self.hero_output_json = output_path
