@@ -26,8 +26,6 @@ def main():
     extract_heroes.add_argument("--output", help="Path to write heroes_data.json")
 
     all_parser = sub.add_parser("all", help="Check for updates, download, extract, and build data")
-    all_parser.add_argument("--items-output", help="Path for items_data.json output")
-    all_parser.add_argument("--heroes-output", help="Path for heroes_data.json output")
     all_parser.add_argument("--force", action="store_true", help="Download even if manifest unchanged")
 
     args = parser.parse_args()
