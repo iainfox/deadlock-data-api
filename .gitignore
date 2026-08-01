@@ -4,6 +4,10 @@ items_data.json
 heroes_data.json
 archive/
 
+# Tracker runtime data (state.json is committed to skip unchanged downloads)
+data/tracker/depots/
+data/tracker/*.log
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]

@@ -1,0 +1,102 @@
+name: Update game data
+
+# Runs the pipeline daily: SteamCMD checks the live depot manifests against the
+# committed data/tracker/state.json, and ONLY downloads/extracts/rebuilds when a
+# manifest changed. On no-change days it just re-commits state.json (which also
+# keeps the schedule alive past the 60-day auto-disable).
+#
+# Steam login / Steam Guard:
+#   - Manifest checks use SteamCMD `+login anonymous` -> no Steam Guard.
+#   - Downloads use DepotDownloader. If STEAM_USER/STEAM_PASS secrets are empty it
+#     logs in anonymously (free games usually allow this) -> no Steam Guard ever.
+#   - If anonymous access is denied for Deadlock, set STEAM_USER/STEAM_PASS secrets
+#     and use a dedicated account WITHOUT Steam Guard. Steam Guard codes cannot be
+#     entered on ephemeral CI runners, and DepotDownloader's saved session lives in
+#     machine-local isolated storage, so it cannot be committed to the repo.
+#
+# Required repo secrets:
+#   CLOUDFLARE_API_TOKEN    R2 read/write token (create in Cloudflare dashboard)
+#   CLOUDFLARE_ACCOUNT_ID   Your Cloudflare account ID
+# Optional repo secrets (only if anonymous download is denied):
+#   STEAM_USER, STEAM_PASS
+# Optional repo variables:
+#   R2_BUCKET               R2 bucket name (default: deadlock-data)
+#
+# R2 bucket must be created once in the dashboard (default name: deadlock-data).
+
+on:
+  schedule:
+    - cron: "23 6 * * *" # 06:23 UTC daily
+  workflow_dispatch:
+    inputs:
+      force:
+        description: Force full re-download even if manifests are unchanged
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: write
+
+env:
+  STEAM_USER: ${{ secrets.STEAM_USER }}
+  STEAM_PASS: ${{ secrets.STEAM_PASS }}
+  CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+  CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+  R2_BUCKET: ${{ vars.R2_BUCKET || 'deadlock-data' }}
+
+jobs:
+  extract:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Download SteamCMD
+        run: |
+          Invoke-WebRequest -Uri "https://steamcdn-a.akamaihd.net/client/installer/steamcmd.zip" -OutFile "tools/steamcmd.zip"
+          Expand-Archive -LiteralPath "tools/steamcmd.zip" -DestinationPath "tools/steamcmd" -Force
+
+      - name: Download DepotDownloader
+        run: |
+          gh release download --repo SteamRE/DepotDownloader --pattern "DepotDownloader-windows-x64.zip" --dir tools/depotdownloader
+          Expand-Archive -LiteralPath "tools/depotdownloader/DepotDownloader-windows-x64.zip" -DestinationPath "tools/depotdownloader" -Force
+
+      - name: Download Source2Viewer-CLI
+        run: |
+          gh release download --repo ValveResourceFormat/ValveResourceFormat --pattern "cli-windows-x64.zip" --dir tools/vrf
+          Expand-Archive -LiteralPath "tools/vrf/cli-windows-x64.zip" -DestinationPath "tools/vrf" -Force
+
+      - name: Download changed depots, extract, build JSON
+        env:
+          STEAMCMD_PATH: ${{ github.workspace }}\tools\steamcmd\steamcmd.exe
+          DEPOTDOWNLOADER_DLL: ${{ github.workspace }}\tools\depotdownloader\DepotDownloader.exe
+          VRF_CLI_PATH: ${{ github.workspace }}\tools\vrf\Source2Viewer-CLI.exe
+        run: python src/main.py all ${{ inputs.force == 'true' && '--force' || '' }}
+
+      - name: Upload JSON to R2 (only if this run produced data)
+        if: hashFiles('items_data.json') != ''
+        run: |
+          npx --yes wrangler r2 object put "${{ env.R2_BUCKET }}/items_data.json" --file items_data.json
+          npx --yes wrangler r2 object put "${{ env.R2_BUCKET }}/heroes_data.json" --file heroes_data.json
+
+      - name: Commit tracked versions (also keeps cron alive)
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/tracker/state.json
+          git diff --cached --quiet
+          if ($LASTEXITCODE -ne 0) {
+            git commit -m "chore: record last downloaded manifests [$(Get-Date -AsUTC -Format 'yyyy-MM-dd HH:mm')]" --no-verify
+            git push
+          }
