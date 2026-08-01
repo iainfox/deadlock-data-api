@@ -1,5 +1,6 @@
 import re
 import subprocess
+from pathlib import Path
 
 from steam.settings import APP_ID, STEAMCMD_PATH, log
 
@@ -7,7 +8,7 @@ from steam.settings import APP_ID, STEAMCMD_PATH, log
 def get_current_manifests(known_depot_ids: list[str] | None = None) -> dict:
     log.info("Querying Steam for current app info...")
     cmd = [STEAMCMD_PATH, "+login", "anonymous", "+app_info_print", APP_ID, "+quit"]
-    result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+    result = subprocess.run(cmd, capture_output=True, text=True, timeout=300, cwd=Path(STEAMCMD_PATH).parent)
     output = result.stdout + result.stderr
 
     manifests = {}

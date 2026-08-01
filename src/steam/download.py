@@ -5,13 +5,8 @@ from steam.settings import APP_ID, STEAM_USER, STEAM_PASS, DEPOTDOWNLOADER_DLL, 
 
 
 def download_depot(depot_id: str, manifest_id: str) -> Path:
-    if not STEAM_USER or not STEAM_PASS:
-        raise RuntimeError("STEAM_USER / STEAM_PASS environment variables are not set.")
-
     out_dir = DOWNLOAD_DIR / depot_id
     out_dir.mkdir(parents=True, exist_ok=True)
-
-    log.info("Downloading depot %s @ manifest %s -> %s", depot_id, manifest_id, out_dir)
 
     depotdownloader_exe = Path(DEPOTDOWNLOADER_DLL)
     if depotdownloader_exe.suffix.lower() == ".exe":
@@ -19,16 +14,20 @@ def download_depot(depot_id: str, manifest_id: str) -> Path:
     else:
         cmd = ["dotnet", str(depotdownloader_exe)]
 
-    cmd += [
-        "-app", APP_ID,
-        "-depot", depot_id,
-        "-manifest", manifest_id,
-        "-username", STEAM_USER,
-        "-password", STEAM_PASS,
-        "-remember-password",
-        "-dir", str(out_dir),
-        "-validate",
-    ]
+    cmd += ["-app", APP_ID, "-depot", depot_id, "-manifest", manifest_id]
+
+    if STEAM_USER:
+        cmd += ["-username", STEAM_USER]
+        if STEAM_PASS:
+            cmd += ["-password", STEAM_PASS]
+        cmd += ["-remember-password"]
+        log.info("Downloading depot %s @ manifest %s as %s", depot_id, manifest_id, STEAM_USER)
+    else:
+        log.info("Downloading depot %s @ manifest %s anonymously", depot_id, manifest_id)
+
+    cmd += ["-dir", str(out_dir), "-validate"]
+    log.info("Output -> %s", out_dir)
+
     result = subprocess.run(cmd)
     if result.returncode != 0:
         log.error("DepotDownloader failed for depot %s (exit code %d)", depot_id, result.returncode)
