@@ -2,12 +2,32 @@ import re
 import subprocess
 from pathlib import Path
 
-from steam.settings import APP_ID, STEAMCMD_PATH, log
+from steam.settings import APP_ID, STEAMCMD_PATH, STEAM_USER, STEAM_PASS, log
 
 
 def get_current_manifests(known_depot_ids: list[str] | None = None) -> dict:
     log.info("Querying Steam for current app info...")
-    cmd = [STEAMCMD_PATH, "+login", "anonymous", "+app_info_print", APP_ID, "+quit"]
+    manifests = _query_manifests(["anonymous"])
+    if not manifests and STEAM_USER:
+        log.info("Anonymous app info incomplete for app %s, retrying with account login...", APP_ID)
+        manifests = _query_manifests([STEAM_USER] + ([STEAM_PASS] if STEAM_PASS else []))
+
+    if not manifests:
+        log.warning(
+            "No manifests parsed from app_info_print output. "
+            "Steam's VDF format can shift or anonymous access may be denied "
+            "for app %s -- inspect the raw output and adjust the regex/login.",
+            APP_ID,
+        )
+
+    if known_depot_ids:
+        manifests = {d: m for d, m in manifests.items() if d in known_depot_ids}
+
+    return manifests
+
+
+def _query_manifests(login: list[str]) -> dict:
+    cmd = [STEAMCMD_PATH, "+login", *login, "+app_info_print", APP_ID, "+quit"]
     result = subprocess.run(cmd, capture_output=True, text=True, timeout=300, cwd=Path(STEAMCMD_PATH).parent)
     output = result.stdout + result.stderr
 
@@ -20,16 +40,5 @@ def get_current_manifests(known_depot_ids: list[str] | None = None) -> dict:
         gid_match = re.search(r'"public"\s*\n\s*\{\s*\n\s*"gid"\s*"(\d+)"', window)
         if gid_match:
             manifests[depot_id] = gid_match.group(1)
-
-    if not manifests:
-        log.warning(
-            "No manifests parsed from app_info_print output. "
-            "Steam's VDF format can shift -- inspect raw output with "
-            "`steamcmd +login anonymous +app_info_print %s +quit` and adjust the regex.",
-            APP_ID,
-        )
-
-    if known_depot_ids:
-        manifests = {d: m for d, m in manifests.items() if d in known_depot_ids}
 
     return manifests
