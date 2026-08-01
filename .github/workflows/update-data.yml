@@ -6,19 +6,20 @@ name: Update game data
 # keeps the schedule alive past the 60-day auto-disable).
 #
 # Steam login / Steam Guard:
-#   - Manifest checks use SteamCMD `+login anonymous` -> no Steam Guard.
-#   - Downloads use DepotDownloader. If STEAM_USER/STEAM_PASS secrets are empty it
-#     logs in anonymously (free games usually allow this) -> no Steam Guard ever.
-#   - If anonymous access is denied for Deadlock, set STEAM_USER/STEAM_PASS secrets
-#     and use a dedicated account WITHOUT Steam Guard. Steam Guard codes cannot be
-#     entered on ephemeral CI runners, and DepotDownloader's saved session lives in
-#     machine-local isolated storage, so it cannot be committed to the repo.
+#   - Everything (manifest checks AND depot downloads) uses SteamCMD, which reads
+#     its saved session from tools/steamcmd/config/config.vdf.
+#   - If the account has Steam Guard enabled, run SteamCMD once locally and commit
+#     that config.vdf as the base64-encoded STEAM_CONFIG_VDF secret. It is restored
+#     below before any Steam operation, so no guard code is needed on CI.
+#   - If the account has no Steam Guard, just set STEAM_USER/STEAM_PASS; SteamCMD
+#     will log in fresh on each run.
 #
 # Required repo secrets:
 #   CLOUDFLARE_API_TOKEN    R2 read/write token (create in Cloudflare dashboard)
 #   CLOUDFLARE_ACCOUNT_ID   Your Cloudflare account ID
-# Optional repo secrets (only if anonymous download is denied):
-#   STEAM_USER, STEAM_PASS
+# Optional repo secrets:
+#   STEAM_USER, STEAM_PASS  Steam login (required unless anonymous works)
+#   STEAM_CONFIG_VDF        base64 of tools/steamcmd/config/config.vdf (skips Steam Guard)
 # Optional repo variables:
 #   R2_BUCKET               R2 bucket name (default: deadlock-data)
 #
@@ -70,10 +71,14 @@ jobs:
           Invoke-WebRequest -Uri "https://steamcdn-a.akamaihd.net/client/installer/steamcmd.zip" -OutFile "tools/steamcmd.zip"
           Expand-Archive -LiteralPath "tools/steamcmd.zip" -DestinationPath "tools/steamcmd" -Force
 
-      - name: Download DepotDownloader
+      - name: Restore SteamCMD auth config
+        if: env.STEAM_CONFIG_VDF != ''
+        env:
+          STEAM_CONFIG_VDF: ${{ secrets.STEAM_CONFIG_VDF }}
         run: |
-          gh release download --repo SteamRE/DepotDownloader --pattern "DepotDownloader-windows-x64.zip" --dir tools/depotdownloader
-          Expand-Archive -LiteralPath "tools/depotdownloader/DepotDownloader-windows-x64.zip" -DestinationPath "tools/depotdownloader" -Force
+          New-Item -ItemType Directory -Path "tools/steamcmd/config" -Force
+          $bytes = [System.Convert]::FromBase64String($env:STEAM_CONFIG_VDF)
+          [System.IO.File]::WriteAllBytes("tools/steamcmd/config/config.vdf", $bytes)
 
       - name: Download Source2Viewer-CLI
         run: |
@@ -83,7 +88,6 @@ jobs:
       - name: Download changed depots, extract, build JSON
         env:
           STEAMCMD_PATH: ${{ github.workspace }}\tools\steamcmd\steamcmd.exe
-          DEPOTDOWNLOADER_DLL: ${{ github.workspace }}\tools\depotdownloader\DepotDownloader.exe
           VRF_CLI_PATH: ${{ github.workspace }}\tools\vrf\Source2Viewer-CLI.exe
         run: python src/main.py all ${{ inputs.force == 'true' && '--force' || '' }}
 
