@@ -7,6 +7,7 @@ from pathlib import Path
 if __name__ == '__main__' and not __package__:
     _sys.path.insert(0, str(Path(__file__).parent.parent))
 
+from archive import archive_data
 from config import Paths
 from heroes.blocks import extract_hero_blocks, extract_ability_blocks
 from heroes.transform import build_hero_record
@@ -78,7 +79,7 @@ def write_output(output, out_path):
         json.dump(output, f, indent=2, ensure_ascii=False)
 
 
-def run(data_dir, output_path=None):
+def run(data_dir, output_path=None, archive_dir=None):
     if output_path is None:
         output_path = os.path.join(os.getcwd(), 'heroes_data.json')
 
@@ -102,6 +103,11 @@ def run(data_dir, output_path=None):
     print(f"Availability: {avail}")
     print(f"Total abilities extracted: {total_abilities}")
 
+    try:
+        archive_data(paths.hero_output_json, output, "heroes", archive_dir)
+    except Exception as e:
+        print(f"  Archive failed: {e}")
+
     return output
 
 
@@ -109,6 +115,7 @@ def main():
     parser = argparse.ArgumentParser(description="Extract hero data from Deadlock game files.")
     parser.add_argument("--data-dir", help="Path to extracted game data directory (depot download dir)")
     parser.add_argument("--output", help="Path to write heroes_data.json")
+    parser.add_argument("--archive-dir", help="Directory for versioned snapshots (default: <output dir>/archive)")
     args = parser.parse_args()
 
     data_dir = args.data_dir
@@ -121,7 +128,7 @@ def main():
     if not data_dir:
         data_dir = os.getcwd()
 
-    run(data_dir, args.output)
+    run(data_dir, args.output, args.archive_dir)
 
 
 if __name__ == '__main__':

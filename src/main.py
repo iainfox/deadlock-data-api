@@ -20,14 +20,17 @@ def main():
     extract = sub.add_parser("extract-items", help="Extract item data from game files")
     extract.add_argument("--data-dir", help="Path to extracted game data directory")
     extract.add_argument("--output", help="Path to write items_data.json")
+    extract.add_argument("--archive-dir", help="Directory for versioned snapshots (default: <output dir>/archive)")
 
     extract_heroes = sub.add_parser("extract-heroes", help="Extract hero data from game files")
     extract_heroes.add_argument("--data-dir", help="Path to extracted game data directory")
     extract_heroes.add_argument("--output", help="Path to write heroes_data.json")
+    extract_heroes.add_argument("--archive-dir", help="Directory for versioned snapshots (default: <output dir>/archive)")
 
     all_parser = sub.add_parser("all", help="Check for updates, download, extract, and build data")
     all_parser.add_argument("--items-output", help="Path for items_data.json output")
     all_parser.add_argument("--heroes-output", help="Path for heroes_data.json output")
+    all_parser.add_argument("--archive-dir", help="Directory for versioned snapshots (default: <output dir>/archive)")
     all_parser.add_argument("--force", action="store_true", help="Download even if manifest unchanged")
 
     args = parser.parse_args()
@@ -65,6 +68,8 @@ def _run_item_extraction(args):
         sys.argv += ["--data-dir", args.data_dir]
     if args.output:
         sys.argv += ["--output", args.output]
+    if args.archive_dir:
+        sys.argv += ["--archive-dir", args.archive_dir]
     extract_main()
 
 
@@ -75,6 +80,8 @@ def _run_hero_extraction(args):
         sys.argv += ["--data-dir", args.data_dir]
     if args.output:
         sys.argv += ["--output", args.output]
+    if args.archive_dir:
+        sys.argv += ["--archive-dir", args.archive_dir]
     hero_extract_main()
 
 
@@ -96,9 +103,9 @@ def _run_all(args):
 
     for data_dir in data_dirs:
         print(f"\nExtracting items from: {data_dir}")
-        extract_items(str(data_dir), args.items_output)
+        extract_items(str(data_dir), args.items_output, args.archive_dir)
         print(f"\nExtracting heroes from: {data_dir}")
-        extract_heroes(str(data_dir), args.heroes_output)
+        extract_heroes(str(data_dir), args.heroes_output, args.archive_dir)
 
 
 def _find_game_data_dirs(download_base):

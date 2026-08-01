@@ -7,6 +7,7 @@ from pathlib import Path
 if __name__ == '__main__' and not __package__:
     _sys.path.insert(0, str(Path(__file__).parent.parent))
 
+from archive import archive_data
 from config import Paths, TIER_PRICES
 from items.blocks import extract_item_blocks
 from items.transform import build_item_record
@@ -57,7 +58,7 @@ def write_output(output, out_path):
         json.dump(output, f, indent=2, ensure_ascii=False)
 
 
-def run(data_dir, output_path=None):
+def run(data_dir, output_path=None, archive_dir=None):
     if output_path is None:
         output_path = os.path.join(os.getcwd(), 'items_data.json')
 
@@ -80,6 +81,11 @@ def run(data_dir, output_path=None):
     print(f"Slots: {slots}")
     print(f"Activation: {activations}")
 
+    try:
+        archive_data(paths.output_json, output, "items", archive_dir)
+    except Exception as e:
+        print(f"  Archive failed: {e}")
+
     return output
 
 
@@ -87,6 +93,7 @@ def main():
     parser = argparse.ArgumentParser(description="Extract item data from Deadlock game files.")
     parser.add_argument("--data-dir", help="Path to extracted game data directory (depot download dir)")
     parser.add_argument("--output", help="Path to write items_data.json")
+    parser.add_argument("--archive-dir", help="Directory for versioned snapshots (default: <output dir>/archive)")
     args = parser.parse_args()
 
     data_dir = args.data_dir
@@ -99,7 +106,7 @@ def main():
     if not data_dir:
         data_dir = os.getcwd()
 
-    run(data_dir, args.output)
+    run(data_dir, args.output, args.archive_dir)
 
 
 if __name__ == '__main__':
