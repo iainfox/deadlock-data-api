@@ -61,12 +61,24 @@ def main():
 
     downloaded_paths = []
     extracted_paths = []
-    try:
-        downloaded = download_depots(changed)
-    except Exception:
-        log.exception("Failed to download depots -- leaving state unchanged for all.")
+    pending = dict(changed)
+    downloaded = {}
+    for attempt in range(1, 4):
+        if not pending:
+            break
+        log.info("Download attempt %d/3 for %d depot(s)", attempt, len(pending))
+        try:
+            downloaded.update(download_depots(pending))
+        except Exception:
+            log.exception("SteamCMD batch failed on attempt %d/3", attempt)
+        pending = {d: m for d, m in pending.items() if d not in downloaded}
+
+    if not downloaded:
+        log.error("Failed to download any depot -- leaving state unchanged.")
         save_state(state)
         return
+    if pending:
+        log.warning("Depots still not downloaded after retries (state left unchanged for them): %s", sorted(pending))
 
     for depot_id, out_dir in downloaded.items():
         downloaded_paths.append(str(out_dir))

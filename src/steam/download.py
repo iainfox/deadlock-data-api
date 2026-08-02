@@ -43,7 +43,7 @@ def download_depots(depot_manifests: dict[str, str]) -> dict[str, Path]:
     downloaded = {}
     for depot_id, manifest_id in depot_manifests.items():
         content_dir = content_root / f"depot_{depot_id}"
-        if not content_dir.exists():
+        if not content_dir.exists() or not any(content_dir.rglob("*")):
             log.error("SteamCMD produced no content for depot %s (exit code %d)", depot_id, result.returncode)
             continue
         out_dir = DOWNLOAD_DIR / depot_id
@@ -55,8 +55,5 @@ def download_depots(depot_manifests: dict[str, str]) -> dict[str, Path]:
         log.info("Depot %s downloaded successfully to %s", depot_id, out_dir)
 
     shutil.rmtree(content_root, ignore_errors=True)
-
-    if not downloaded:
-        raise RuntimeError(f"SteamCMD exited with code {result.returncode}")
 
     return downloaded
