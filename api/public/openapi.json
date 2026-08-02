@@ -3,7 +3,7 @@
 	"info": {
 		"title": "Deadlock Data API",
 		"version": "0.1.0",
-		"description": "Up-to-date item and hero data for Deadlock, extracted nightly from the game's own VPK files and served from Cloudflare R2. Every game update is archived so you can diff builds over time.",
+		"description": "Up-to-date item and hero data for Deadlock, extracted nightly from the game's VPK files and served from Cloudflare R2. Every game update is archived so you can diff builds over time.",
 		"termsOfService": ""
 	},
 	"servers": [
