@@ -67,17 +67,25 @@ def _save_index(archive_dir: Path, index: dict) -> None:
 
 
 def _content_hash(data: dict) -> str:
-    payload = json.dumps(data, sort_keys=True, ensure_ascii=False)
+    payload = json.dumps(
+        {k: v for k, v in data.items() if k != "_metadata"},
+        sort_keys=True,
+        ensure_ascii=False,
+    )
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
 
+def enrich_metadata(data: dict, build_id: str | None = None) -> dict:
+    """Add provenance (build_id, capture time, manifests) to a data dict."""
+    meta = data.setdefault("_metadata", {})
+    meta.setdefault("build_id", build_id or get_build_id())
+    meta.setdefault("captured_at", datetime.now(timezone.utc).isoformat())
+    meta.setdefault("manifests", _current_manifests())
+    return data
+
+
 def _enrich(data: dict, build_id: str) -> dict:
-    enriched = copy.deepcopy(data)
-    meta = enriched.setdefault("_metadata", {})
-    meta["build_id"] = build_id
-    meta["captured_at"] = datetime.now(timezone.utc).isoformat()
-    meta["manifests"] = _current_manifests()
-    return enriched
+    return enrich_metadata(copy.deepcopy(data), build_id)
 
 
 def archive_data(output_path, data: dict, kind: str, archive_dir=None) -> Path:

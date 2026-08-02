@@ -7,7 +7,7 @@ from pathlib import Path
 if __name__ == '__main__' and not __package__:
     _sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from archive import archive_data
+from archive import archive_data, enrich_metadata
 from config import Paths, TIER_PRICES
 from items.blocks import extract_item_blocks
 from items.transform import build_item_record
@@ -71,6 +71,7 @@ def run(data_dir, output_path=None, archive_dir=None):
     names, descriptions = load_localization(paths)
     items = load_parsed_items(paths)
     output = build_output(items, names, descriptions)
+    enrich_metadata(output)
     write_output(output, paths.output_json)
 
     print(f"\nOutput: {paths.output_json}")

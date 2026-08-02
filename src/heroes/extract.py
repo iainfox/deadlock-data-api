@@ -7,7 +7,7 @@ from pathlib import Path
 if __name__ == '__main__' and not __package__:
     _sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from archive import archive_data
+from archive import archive_data, enrich_metadata
 from config import Paths
 from heroes.blocks import extract_hero_blocks, extract_ability_blocks
 from heroes.transform import build_hero_record
@@ -94,6 +94,7 @@ def run(data_dir, output_path=None, archive_dir=None):
     heroes = load_parsed_heroes(paths)
     abilities = load_parsed_abilities(paths)
     output = build_output(heroes, abilities, hero_names, hero_descriptions)
+    enrich_metadata(output)
     write_output(output, paths.hero_output_json)
 
     print(f"\nOutput: {paths.hero_output_json}")

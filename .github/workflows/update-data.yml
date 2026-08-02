@@ -22,6 +22,10 @@ name: Update game data
 #   R2_BUCKET               R2 bucket name (default: deadlock-data)
 #
 # R2 bucket must be created once in the dashboard (default name: deadlock-data).
+# Bucket layout:
+#   items_data.json / heroes_data.json        latest build (with _metadata.build_id/manifests)
+#   archive/<build_id>/{items,heroes}_data.json   versioned snapshots of past builds
+#   archive/index.json                        index of every archived build
 
 on:
   schedule:
@@ -86,6 +90,16 @@ jobs:
         run: |
           npx --yes wrangler r2 object put "${{ env.R2_BUCKET }}/items_data.json" --file items_data.json --remote
           npx --yes wrangler r2 object put "${{ env.R2_BUCKET }}/heroes_data.json" --file heroes_data.json --remote
+
+      - name: Upload versioned archive to R2
+        if: hashFiles('archive/**/*.json') != ''
+        run: |
+          $bucket = "${{ env.R2_BUCKET }}"
+          $root = (Resolve-Path .).Path
+          Get-ChildItem archive -Recurse -File -Filter *.json | ForEach-Object {
+            $key = $_.FullName.Substring($root.Length + 1).Replace('\', '/')
+            npx --yes wrangler r2 object put "$bucket/$key" --file $_.FullName --remote
+          }
 
       - name: Commit tracked versions (also keeps cron alive)
         run: |
