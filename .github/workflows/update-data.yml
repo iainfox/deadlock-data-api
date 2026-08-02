@@ -84,8 +84,8 @@ jobs:
       - name: Upload JSON to R2 (only if this run produced data)
         if: hashFiles('items_data.json') != ''
         run: |
-          npx --yes wrangler r2 object put "${{ env.R2_BUCKET }}/items_data.json" --file items_data.json
-          npx --yes wrangler r2 object put "${{ env.R2_BUCKET }}/heroes_data.json" --file heroes_data.json
+          npx --yes wrangler r2 object put "${{ env.R2_BUCKET }}/items_data.json" --file items_data.json --remote
+          npx --yes wrangler r2 object put "${{ env.R2_BUCKET }}/heroes_data.json" --file heroes_data.json --remote
 
       - name: Commit tracked versions (also keeps cron alive)
         run: |
