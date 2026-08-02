@@ -4,14 +4,21 @@ import hmac
 import struct
 import time
 
+_CHARSET = "23456789BCDFGHJKMNPQRTVWXY"
+
 
 def generate_code(shared_secret: str) -> str:
     key = base64.b64decode(shared_secret)
     message = struct.pack(">Q", int(time.time()) // 30)
     digest = hmac.new(key, message, hashlib.sha1).digest()
-    offset = digest[-1] & 0x0F
-    code = (struct.unpack(">I", digest[offset:offset + 4])[0] & 0x7FFFFFFF) % 100000
-    return f"{code:05d}"
+    start = digest[19] & 0x0F
+    codeint = struct.unpack(">I", digest[start:start + 4])[0] & 0x7FFFFFFF
+
+    code = ""
+    for _ in range(5):
+        codeint, i = divmod(codeint, len(_CHARSET))
+        code += _CHARSET[i]
+    return code
 
 
 def steam_guard_arg(shared_secret: str | None) -> list[str]:
