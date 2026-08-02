@@ -83,7 +83,7 @@ jobs:
         env:
           STEAMCMD_PATH: ${{ github.workspace }}\tools\steamcmd\steamcmd.exe
           VRF_CLI_PATH: ${{ github.workspace }}\tools\vrf\Source2Viewer-CLI.exe
-        run: python src/main.py all ${{ inputs.force == 'true' && '--force' || '' }}
+        run: python src/main.py all ${{ fromJSON(inputs.force) && '--force' || '' }}
 
       - name: Upload JSON to R2 (only if this run produced data)
         if: hashFiles('items_data.json') != ''
