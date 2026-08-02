@@ -21,6 +21,18 @@ def generate_code(shared_secret: str) -> str:
     return code
 
 
+def wait_for_next_window(buffer: float = 2.0) -> None:
+    """Sleep until the next 30s TOTP window starts (plus a small buffer).
+
+    Steam Guard codes are single-use per window, so a code generated after
+    this call is guaranteed to differ from any code generated before it.
+    """
+    now = time.time()
+    delay = (int(now) // 30 + 1) * 30 + buffer - now
+    if delay > 0:
+        time.sleep(delay)
+
+
 def steam_guard_arg(shared_secret: str | None) -> list[str]:
     if not shared_secret:
         return []

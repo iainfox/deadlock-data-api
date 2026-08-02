@@ -10,7 +10,7 @@ if __name__ == '__main__' and not __package__:
 from steam.settings import KNOWN_DEPOT_IDS, DOWNLOAD_DIR, log
 from steam.state import load_state, save_state
 from steam.manifests import get_current_manifests
-from steam.download import download_depot
+from steam.download import download_depots
 from steam.extract import extract_depot
 
 
@@ -61,16 +61,22 @@ def main():
 
     downloaded_paths = []
     extracted_paths = []
-    for depot_id, manifest_id in changed.items():
-        try:
-            out_dir = download_depot(depot_id, manifest_id)
-            downloaded_paths.append(str(out_dir))
-            state["manifests"][depot_id] = manifest_id
+    try:
+        downloaded = download_depots(changed)
+    except Exception:
+        log.exception("Failed to download depots -- leaving state unchanged for all.")
+        save_state(state)
+        return
 
+    for depot_id, out_dir in downloaded.items():
+        downloaded_paths.append(str(out_dir))
+        state["manifests"][depot_id] = changed[depot_id]
+
+        try:
             if not args.skip_extract:
                 extracted_paths.extend(extract_depot(out_dir))
         except Exception:
-            log.exception("Failed to process depot %s -- leaving state unchanged for it.", depot_id)
+            log.exception("Failed to extract depot %s -- manifest already recorded.", depot_id)
 
     save_state(state)
 
