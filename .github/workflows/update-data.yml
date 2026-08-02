@@ -6,20 +6,18 @@ name: Update game data
 # keeps the schedule alive past the 60-day auto-disable).
 #
 # Steam login / Steam Guard:
-#   - Everything (manifest checks AND depot downloads) uses SteamCMD, which reads
-#     its saved session from tools/steamcmd/config/config.vdf.
-#   - If the account has Steam Guard enabled, run SteamCMD once locally and commit
-#     that config.vdf as the base64-encoded STEAM_CONFIG_VDF secret. It is restored
-#     below before any Steam operation, so no guard code is needed on CI.
-#   - If the account has no Steam Guard, just set STEAM_USER/STEAM_PASS; SteamCMD
-#     will log in fresh on each run.
+#   - Everything (manifest checks AND depot downloads) uses SteamCMD.
+#   - If the account has Steam Guard, generate a fresh code each run via TOTP
+#     from the STEAM_SHARED_SECRET (the mobile authenticator's shared_secret),
+#     passed as the third +login argument. Works from any machine/IP.
+#   - If the account has no Steam Guard, just set STEAM_USER/STEAM_PASS.
 #
 # Required repo secrets:
 #   CLOUDFLARE_API_TOKEN    R2 read/write token (create in Cloudflare dashboard)
 #   CLOUDFLARE_ACCOUNT_ID   Your Cloudflare account ID
 # Optional repo secrets:
 #   STEAM_USER, STEAM_PASS  Steam login (required unless anonymous works)
-#   STEAM_CONFIG_VDF        base64 of tools/steamcmd/config/config.vdf (skips Steam Guard)
+#   STEAM_SHARED_SECRET     Steam Guard mobile authenticator shared_secret (base64, from .maFile)
 # Optional repo variables:
 #   R2_BUCKET               R2 bucket name (default: deadlock-data)
 #
@@ -42,6 +40,7 @@ permissions:
 env:
   STEAM_USER: ${{ secrets.STEAM_USER }}
   STEAM_PASS: ${{ secrets.STEAM_PASS }}
+  STEAM_SHARED_SECRET: ${{ secrets.STEAM_SHARED_SECRET }}
   CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
   CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
   R2_BUCKET: ${{ vars.R2_BUCKET || 'deadlock-data' }}
@@ -70,15 +69,6 @@ jobs:
         run: |
           Invoke-WebRequest -Uri "https://steamcdn-a.akamaihd.net/client/installer/steamcmd.zip" -OutFile "tools/steamcmd.zip"
           Expand-Archive -LiteralPath "tools/steamcmd.zip" -DestinationPath "tools/steamcmd" -Force
-
-      - name: Restore SteamCMD auth config
-        if: env.STEAM_CONFIG_VDF != ''
-        env:
-          STEAM_CONFIG_VDF: ${{ secrets.STEAM_CONFIG_VDF }}
-        run: |
-          New-Item -ItemType Directory -Path "tools/steamcmd/config" -Force
-          $bytes = [System.Convert]::FromBase64String($env:STEAM_CONFIG_VDF)
-          [System.IO.File]::WriteAllBytes("tools/steamcmd/config/config.vdf", $bytes)
 
       - name: Download Source2Viewer-CLI
         run: |

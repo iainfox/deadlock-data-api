@@ -2,7 +2,8 @@ import re
 import subprocess
 from pathlib import Path
 
-from steam.settings import APP_ID, STEAMCMD_PATH, STEAM_USER, STEAM_PASS, log
+from steam.settings import APP_ID, STEAMCMD_PATH, STEAM_USER, STEAM_PASS, STEAM_SHARED_SECRET, log
+from steam.totp import steam_guard_arg
 
 
 def get_current_manifests(known_depot_ids: list[str] | None = None) -> dict:
@@ -10,7 +11,7 @@ def get_current_manifests(known_depot_ids: list[str] | None = None) -> dict:
     manifests = _query_manifests(["anonymous"])
     if not manifests and STEAM_USER:
         log.info("Anonymous app info incomplete for app %s, retrying with account login...", APP_ID)
-        manifests = _query_manifests([STEAM_USER] + ([STEAM_PASS] if STEAM_PASS else []))
+        manifests = _query_manifests([STEAM_USER] + ([STEAM_PASS] if STEAM_PASS else []) + steam_guard_arg(STEAM_SHARED_SECRET))
 
     if not manifests:
         log.warning(

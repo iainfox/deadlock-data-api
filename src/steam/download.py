@@ -2,7 +2,8 @@ import shutil
 import subprocess
 from pathlib import Path
 
-from steam.settings import APP_ID, STEAM_USER, STEAM_PASS, STEAMCMD_PATH, DOWNLOAD_DIR, log
+from steam.settings import APP_ID, STEAM_USER, STEAM_PASS, STEAM_SHARED_SECRET, STEAMCMD_PATH, DOWNLOAD_DIR, log
+from steam.totp import steam_guard_arg
 
 
 def _steamcmd_home() -> Path:
@@ -14,7 +15,7 @@ def download_depot(depot_id: str, manifest_id: str) -> Path:
     out_dir.mkdir(parents=True, exist_ok=True)
 
     if STEAM_USER:
-        login = [STEAM_USER] + ([STEAM_PASS] if STEAM_PASS else [])
+        login = [STEAM_USER] + ([STEAM_PASS] if STEAM_PASS else []) + steam_guard_arg(STEAM_SHARED_SECRET)
         log.info("Downloading depot %s @ manifest %s as %s", depot_id, manifest_id, STEAM_USER)
     else:
         login = ["anonymous"]

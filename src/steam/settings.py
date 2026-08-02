@@ -23,6 +23,7 @@ VPK_EXTENSIONS = "txt,lua,kv3,db,gameevents,vcss_c,vjs_c,vts_c,vxml_c,vsndevts_c
 
 STEAM_USER = os.environ.get("STEAM_USER")
 STEAM_PASS = os.environ.get("STEAM_PASS")
+STEAM_SHARED_SECRET = os.environ.get("STEAM_SHARED_SECRET")
 
 KNOWN_DEPOT_IDS = ["1422451", "1422452", "1422454", "1422456", "1422457"]
 
