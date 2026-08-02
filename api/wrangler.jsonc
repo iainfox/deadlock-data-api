@@ -1,0 +1,15 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "deadlock-data-api",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-08-01",
+  "observability": {
+    "enabled": true
+  },
+  "r2_buckets": [
+    {
+      "binding": "DATA",
+      "bucket_name": "deadlock-data"
+    }
+  ]
+}

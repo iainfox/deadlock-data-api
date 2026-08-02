@@ -1,0 +1,46 @@
+name: Deploy Deadlock Data API
+
+# Deploys the Cloudflare Worker (api/) whenever the api/ sources change.
+#
+# Required repo secrets:
+#   CLOUDFLARE_API_TOKEN    Token with permission to edit the worker
+#                           (Workers Scripts: Edit) and read the R2 bucket
+#   CLOUDFLARE_ACCOUNT_ID   Your Cloudflare account ID
+#
+# The worker reads the R2 bucket via the binding declared in api/wrangler.jsonc.
+
+on:
+  push:
+    paths:
+      - "api/**"
+      - ".github/workflows/deploy-api.yml"
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: api
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: api/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Deploy worker
+        run: npx wrangler deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
