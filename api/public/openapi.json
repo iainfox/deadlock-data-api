@@ -1,0 +1,1052 @@
+{
+	"openapi": "3.1.0",
+	"info": {
+		"title": "Deadlock Data API",
+		"version": "0.1.0",
+		"description": "Up-to-date item and hero data for Deadlock, extracted nightly from the game's own VPK files and served from Cloudflare R2. Every game update is archived so you can diff builds over time.",
+		"termsOfService": ""
+	},
+	"servers": [
+		{
+			"url": "/"
+		}
+	],
+	"tags": [
+		{
+			"name": "items",
+			"description": "Item data, including stats, tier, slot and availability."
+		},
+		{
+			"name": "heroes",
+			"description": "Hero data, including starting stats, scaling, weapon and abilities."
+		},
+		{
+			"name": "versions",
+			"description": "Build history — every archived game version, keyed by depot manifest pair."
+		}
+	],
+	"paths": {
+		"/items": {
+			"get": {
+				"tags": [
+					"items"
+				],
+				"summary": "List all items",
+				"description": "Returns the latest item dataset: every item keyed by its numeric id, plus provenance metadata (build id, capture time, source manifests).",
+				"operationId": "listItems",
+				"responses": {
+					"200": {
+						"description": "The full item dataset.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ItemsData"
+								},
+								"example": {
+									"_metadata": {
+										"source": "abilities.vdata",
+										"count": 252,
+										"pricing": [
+											0,
+											800,
+											1600,
+											3200,
+											6400,
+											9999
+										],
+										"build_id": "1422451_1500824687027946367_1422452_7428791510010711375_1422456_3634671154450596130",
+										"captured_at": "2026-08-02T02:51:00+00:00",
+										"manifests": {
+											"1422451": "1500824687027946367",
+											"1422452": "7428791510010711375",
+											"1422456": "3634671154450596130"
+										}
+									},
+									"items": {
+										"5": {
+											"id": "5",
+											"display_name": "Headshot Booster",
+											"description": "Your bullets deal bonus damage when you hit the head.",
+											"tier": 1,
+											"soul_cost": 800,
+											"slot": "Weapon",
+											"activation": "Passive",
+											"available_in": "main_game",
+											"stats": {
+												"BulletDamageBonus": {
+													"value": 0.08
+												},
+												"MoveSpeedBonus": {
+													"value": 0.1,
+													"usage": "PropertyValue"
+												}
+											},
+											"passive": {
+												"BulletDamageBonus": 0.08
+											},
+											"active": {},
+											"components": [
+												"item_bullet_fire_rate"
+											]
+										}
+									}
+								}
+							}
+						}
+					},
+					"500": {
+						"$ref": "#/components/responses/InternalError"
+					}
+				}
+			}
+		},
+		"/items/ids": {
+			"get": {
+				"tags": [
+					"items"
+				],
+				"summary": "Item id/name index",
+				"description": "A lightweight map of every item id to its display name and tier. Useful for building pickers and dropdowns without the full dataset.",
+				"operationId": "listItemIds",
+				"responses": {
+					"200": {
+						"description": "Map of item id to summary.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"additionalProperties": {
+										"type": "object",
+										"properties": {
+											"id": {
+												"type": "string"
+											},
+											"display_name": {
+												"type": "string"
+											},
+											"tier": {
+												"type": "integer"
+											}
+										}
+									}
+								},
+								"example": {
+									"5": {
+										"id": "5",
+										"display_name": "Headshot Booster",
+										"tier": 1
+									},
+									"9": {
+										"id": "9",
+										"display_name": "High-Velocity Mag",
+										"tier": 2
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/items/summary": {
+			"get": {
+				"tags": [
+					"items"
+				],
+				"summary": "Item summary",
+				"description": "Total item count broken down by tier, slot and activation type.",
+				"operationId": "itemSummary",
+				"responses": {
+					"200": {
+						"description": "Aggregated item statistics.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"total": {
+											"type": "integer"
+										},
+										"tiers": {
+											"type": "object",
+											"additionalProperties": {
+												"type": "integer"
+											}
+										},
+										"slots": {
+											"type": "object",
+											"additionalProperties": {
+												"type": "integer"
+											}
+										},
+										"activations": {
+											"type": "object",
+											"additionalProperties": {
+												"type": "integer"
+											}
+										}
+									}
+								},
+								"example": {
+									"total": 252,
+									"tiers": {
+										"0": 15,
+										"1": 40,
+										"2": 46,
+										"3": 60,
+										"4": 60,
+										"5": 31
+									},
+									"slots": {
+										"Weapon": 85,
+										"Vitality": 82,
+										"Spirit": 85
+									},
+									"activations": {
+										"Active": 38,
+										"Passive": 214
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/items/{id}": {
+			"get": {
+				"tags": [
+					"items"
+				],
+				"summary": "Get an item",
+				"description": "Returns a single item. Look up by numeric id (e.g. `/items/5`) or by url-slugged display name (e.g. `/items/headshot-booster`).",
+				"operationId": "getItem",
+				"parameters": [
+					{
+						"name": "id",
+						"in": "path",
+						"required": true,
+						"description": "Item id or display name (case-insensitive, spaces/special chars become dashes).",
+						"schema": {
+							"type": "string"
+						},
+						"example": "5"
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "The requested item.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Item"
+								}
+							}
+						}
+					},
+					"404": {
+						"$ref": "#/components/responses/NotFound"
+					},
+					"500": {
+						"$ref": "#/components/responses/InternalError"
+					}
+				}
+			}
+		},
+		"/heroes": {
+			"get": {
+				"tags": [
+					"heroes"
+				],
+				"summary": "List all heroes",
+				"description": "Returns the latest hero dataset: every hero keyed by its numeric id, with starting stats, stat scaling, weapon and signature abilities.",
+				"operationId": "listHeroes",
+				"responses": {
+					"200": {
+						"description": "The full hero dataset.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/HeroesData"
+								},
+								"example": {
+									"_metadata": {
+										"source": "heroes.vdata",
+										"count": 59,
+										"build_id": "1422451_1500824687027946367_1422452_7428791510010711375_1422456_3634671154450596130",
+										"captured_at": "2026-08-02T02:51:00+00:00"
+									},
+									"heroes": {
+										"1": {
+											"id": "1",
+											"display_name": "Seven",
+											"description": "A storm-tempered gunslinger who channels the power of the skies.",
+											"hero_id": 1,
+											"complexity": 1,
+											"available_in": "main_game",
+											"stats": {
+												"MaxHealth": 650,
+												"MoveSpeed": 7.0
+											},
+											"stat_scaling": {
+												"MaxHealth": 42,
+												"BulletDamage": 0.5
+											},
+											"tags": [
+												"Carry",
+												"Poke"
+											],
+											"weapon": {
+												"id": "hero_7_weapon",
+												"display_name": "Storm Rifle",
+												"activation": "ESlot_Weapon_Primary",
+												"stats": {
+													"FireRate": {
+														"value": 6.0
+													}
+												}
+											},
+											"abilities": {
+												"1": {
+													"id": "hero_7_ability_1",
+													"display_name": "Lightning Ball",
+													"activation": "EAbilityActivation_Active",
+													"stats": {
+														"AbilityCooldown": {
+															"value": 16
+														}
+													}
+												},
+												"2": {
+													"id": "hero_7_ability_2",
+													"display_name": "Storm Cloud",
+													"activation": "EAbilityActivation_Active",
+													"stats": {}
+												},
+												"3": {
+													"id": "hero_7_ability_3",
+													"display_name": "Static Charge",
+													"activation": "EAbilityActivation_Passive",
+													"stats": {}
+												},
+												"4": {
+													"id": "hero_7_ability_4",
+													"display_name": "Storm Surge",
+													"activation": "EAbilityActivation_Active",
+													"stats": {}
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					},
+					"500": {
+						"$ref": "#/components/responses/InternalError"
+					}
+				}
+			}
+		},
+		"/heroes/ids": {
+			"get": {
+				"tags": [
+					"heroes"
+				],
+				"summary": "Hero id/name index",
+				"description": "A lightweight map of every hero id to its numeric hero_id and display name.",
+				"operationId": "listHeroIds",
+				"responses": {
+					"200": {
+						"description": "Map of hero id to summary.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"additionalProperties": {
+										"type": "object",
+										"properties": {
+											"id": {
+												"type": "string"
+											},
+											"hero_id": {
+												"type": "integer"
+											},
+											"display_name": {
+												"type": "string"
+											}
+										}
+									}
+								},
+								"example": {
+									"1": {
+										"id": "1",
+										"hero_id": 1,
+										"display_name": "Seven"
+									},
+									"4": {
+										"id": "4",
+										"hero_id": 4,
+										"display_name": "Vindicta"
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/heroes/summary": {
+			"get": {
+				"tags": [
+					"heroes"
+				],
+				"summary": "Hero summary",
+				"description": "Total hero count broken down by availability, plus the total number of abilities across all heroes.",
+				"operationId": "heroSummary",
+				"responses": {
+					"200": {
+						"description": "Aggregated hero statistics.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"total": {
+											"type": "integer"
+										},
+										"available_in": {
+											"type": "object",
+											"additionalProperties": {
+												"type": "integer"
+											}
+										},
+										"total_abilities": {
+											"type": "integer"
+										}
+									}
+								},
+								"example": {
+									"total": 59,
+									"available_in": {
+										"main_game": 55,
+										"in_dev": 4
+									},
+									"total_abilities": 240
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/heroes/{id}": {
+			"get": {
+				"tags": [
+					"heroes"
+				],
+				"summary": "Get a hero",
+				"description": "Returns a single hero. Look up by numeric id (e.g. `/heroes/1`), numeric hero_id (e.g. `/heroes/7`), or url-slugged display name (e.g. `/heroes/seven`).",
+				"operationId": "getHero",
+				"parameters": [
+					{
+						"name": "id",
+						"in": "path",
+						"required": true,
+						"description": "Hero id, hero_id, or display name (case-insensitive).",
+						"schema": {
+							"type": "string"
+						},
+						"example": "seven"
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "The requested hero.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Hero"
+								}
+							}
+						}
+					},
+					"404": {
+						"$ref": "#/components/responses/NotFound"
+					},
+					"500": {
+						"$ref": "#/components/responses/InternalError"
+					}
+				}
+			}
+		},
+		"/versions": {
+			"get": {
+				"tags": [
+					"versions"
+				],
+				"summary": "List builds",
+				"description": "Lists every archived game version, newest first, with capture time, source manifests and per-kind content hashes.",
+				"operationId": "listVersions",
+				"responses": {
+					"200": {
+						"description": "Index of archived builds.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"count": {
+											"type": "integer"
+										},
+										"builds": {
+											"type": "array",
+											"items": {
+												"$ref": "#/components/schemas/VersionEntry"
+											}
+										}
+									}
+								},
+								"example": {
+									"count": 3,
+									"builds": [
+										{
+											"build_id": "1422451_1500824687027946367_1422452_7428791510010711375_1422456_3634671154450596130",
+											"captured_at": "2026-08-02T02:51:00+00:00",
+											"manifests": {
+												"1422451": "1500824687027946367"
+											},
+											"items_count": 252,
+											"heroes_count": 59,
+											"items_hash": "a1b2c3...",
+											"heroes_hash": "d4e5f6..."
+										}
+									]
+								}
+							}
+						}
+					},
+					"500": {
+						"$ref": "#/components/responses/InternalError"
+					}
+				}
+			}
+		},
+		"/versions/{buildId}/items": {
+			"get": {
+				"tags": [
+					"versions"
+				],
+				"summary": "Get archived items",
+				"description": "Returns the item dataset as it was in a specific archived build.",
+				"operationId": "getVersionItems",
+				"parameters": [
+					{
+						"name": "buildId",
+						"in": "path",
+						"required": true,
+						"description": "A build id from `/versions`.",
+						"schema": {
+							"type": "string"
+						},
+						"example": "1422451_1500824687027946367_1422452_7428791510010711375_1422456_3634671154450596130"
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "The archived item dataset.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ItemsData"
+								}
+							}
+						}
+					},
+					"404": {
+						"$ref": "#/components/responses/NotFound"
+					},
+					"500": {
+						"$ref": "#/components/responses/InternalError"
+					}
+				}
+			}
+		},
+		"/versions/{buildId}/heroes": {
+			"get": {
+				"tags": [
+					"versions"
+				],
+				"summary": "Get archived heroes",
+				"description": "Returns the hero dataset as it was in a specific archived build.",
+				"operationId": "getVersionHeroes",
+				"parameters": [
+					{
+						"name": "buildId",
+						"in": "path",
+						"required": true,
+						"description": "A build id from `/versions`.",
+						"schema": {
+							"type": "string"
+						},
+						"example": "1422451_1500824687027946367_1422452_7428791510010711375_1422456_3634671154450596130"
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "The archived hero dataset.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/HeroesData"
+								}
+							}
+						}
+					},
+					"404": {
+						"$ref": "#/components/responses/NotFound"
+					},
+					"500": {
+						"$ref": "#/components/responses/InternalError"
+					}
+				}
+			}
+		}
+	},
+	"components": {
+		"schemas": {
+			"Metadata": {
+				"type": "object",
+				"properties": {
+					"source": {
+						"type": "string",
+						"description": "The source file the dataset was extracted from."
+					},
+					"count": {
+						"type": "integer",
+						"description": "Number of records in this dataset."
+					},
+					"pricing": {
+						"type": "array",
+						"items": {
+							"type": "integer"
+						},
+						"description": "Soul cost per tier index."
+					},
+					"build_id": {
+						"type": "string",
+						"description": "Depot manifest pairs (depot_manifest), joined by underscores, sorted by depot."
+					},
+					"captured_at": {
+						"type": "string",
+						"format": "date-time",
+						"description": "ISO-8601 time this build was captured."
+					},
+					"manifests": {
+						"type": "object",
+						"additionalProperties": {
+							"type": "string"
+						},
+						"description": "Map of depot id to manifest id."
+					}
+				}
+			},
+			"ItemStat": {
+				"type": "object",
+				"properties": {
+					"value": {
+						"description": "Parsed stat value (number when numeric, otherwise string).",
+						"oneOf": [
+							{
+								"type": "number"
+							},
+							{
+								"type": "string"
+							}
+						]
+					},
+					"usage": {
+						"type": "string",
+						"description": "How the stat is used by the game, when non-default."
+					}
+				}
+			},
+			"Item": {
+				"type": "object",
+				"required": [
+					"id",
+					"display_name",
+					"tier",
+					"soul_cost",
+					"slot",
+					"activation",
+					"available_in",
+					"stats"
+				],
+				"properties": {
+					"id": {
+						"type": "string",
+						"description": "Numeric item id as a string."
+					},
+					"display_name": {
+						"type": "string"
+					},
+					"description": {
+						"type": "string"
+					},
+					"tier": {
+						"type": "integer",
+						"description": "Item tier (0-5)."
+					},
+					"soul_cost": {
+						"type": "integer",
+						"description": "Cost in souls for this tier."
+					},
+					"slot": {
+						"type": "string",
+						"enum": [
+							"Weapon",
+							"Vitality",
+							"Spirit"
+						],
+						"description": "Which slot the item occupies."
+					},
+					"activation": {
+						"type": "string",
+						"enum": [
+							"Active",
+							"Passive"
+						]
+					},
+					"available_in": {
+						"type": "string",
+						"enum": [
+							"main_game",
+							"street_brawl",
+							"in_dev"
+						]
+					},
+					"stats": {
+						"type": "object",
+						"additionalProperties": {
+							"$ref": "#/components/schemas/ItemStat"
+						}
+					},
+					"passive": {
+						"type": "object",
+						"additionalProperties": {
+							"oneOf": [
+								{
+									"type": "number"
+								},
+								{
+									"type": "string"
+								}
+							]
+						},
+						"description": "Promoted passive stat values."
+					},
+					"active": {
+						"type": "object",
+						"additionalProperties": {
+							"oneOf": [
+								{
+									"type": "number"
+								},
+								{
+									"type": "string"
+								}
+							]
+						},
+						"description": "Promoted active stat values."
+					},
+					"cooldown": {
+						"type": "number"
+					},
+					"duration": {
+						"type": "number"
+					},
+					"cast_range": {
+						"type": "number"
+					},
+					"charges": {
+						"type": "number"
+					},
+					"components": {
+						"type": "array",
+						"items": {
+							"type": "string"
+						},
+						"description": "Item ids this item builds from."
+					},
+					"upgrades": {
+						"type": "array",
+						"items": {
+							"type": "object",
+							"additionalProperties": true
+						},
+						"description": "Per-tier property upgrades."
+					},
+					"tooltip_descriptions": {
+						"type": "array",
+						"items": {
+							"type": "object",
+							"properties": {
+								"section": {
+									"type": "string"
+								},
+								"description": {
+									"type": "string"
+								}
+							}
+						}
+					}
+				}
+			},
+			"ItemsData": {
+				"type": "object",
+				"properties": {
+					"_metadata": {
+						"$ref": "#/components/schemas/Metadata"
+					},
+					"items": {
+						"type": "object",
+						"additionalProperties": {
+							"$ref": "#/components/schemas/Item"
+						},
+						"description": "Items keyed by numeric id."
+					}
+				}
+			},
+			"Ability": {
+				"type": "object",
+				"properties": {
+					"id": {
+						"type": "string"
+					},
+					"display_name": {
+						"type": "string"
+					},
+					"description": {
+						"type": "string"
+					},
+					"activation": {
+						"type": "string"
+					},
+					"stats": {
+						"type": "object",
+						"additionalProperties": {
+							"$ref": "#/components/schemas/ItemStat"
+						}
+					},
+					"cooldown": {
+						"type": "number"
+					},
+					"duration": {
+						"type": "number"
+					},
+					"cast_range": {
+						"type": "number"
+					},
+					"charges": {
+						"type": "number"
+					},
+					"upgrades": {
+						"type": "array",
+						"items": {
+							"type": "object",
+							"additionalProperties": true
+						}
+					},
+					"tooltip_descriptions": {
+						"type": "array",
+						"items": {
+							"type": "object"
+						}
+					}
+				}
+			},
+			"Hero": {
+				"type": "object",
+				"required": [
+					"id",
+					"display_name",
+					"hero_id",
+					"complexity",
+					"available_in",
+					"stats",
+					"stat_scaling",
+					"tags"
+				],
+				"properties": {
+					"id": {
+						"type": "string",
+						"description": "Numeric hero id as a string."
+					},
+					"display_name": {
+						"type": "string"
+					},
+					"description": {
+						"type": "string"
+					},
+					"hero_id": {
+						"type": "integer",
+						"description": "Numeric hero id."
+					},
+					"complexity": {
+						"type": "integer",
+						"description": "Difficulty rating (1-3)."
+					},
+					"available_in": {
+						"type": "string",
+						"enum": [
+							"main_game",
+							"in_dev"
+						]
+					},
+					"stats": {
+						"type": "object",
+						"additionalProperties": {
+							"oneOf": [
+								{
+									"type": "number"
+								},
+								{
+									"type": "string"
+								}
+							]
+						},
+						"description": "Starting stats at level 1."
+					},
+					"stat_scaling": {
+						"type": "object",
+						"additionalProperties": {
+							"oneOf": [
+								{
+									"type": "number"
+								},
+								{
+									"type": "string"
+								}
+							]
+						},
+						"description": "Per-level stat gains."
+					},
+					"scaling_stats": {
+						"type": "object",
+						"additionalProperties": {
+							"oneOf": [
+								{
+									"type": "number"
+								},
+								{
+									"type": "string"
+								}
+							]
+						}
+					},
+					"tags": {
+						"type": "array",
+						"items": {
+							"type": "string"
+						}
+					},
+					"weapon": {
+						"$ref": "#/components/schemas/Ability",
+						"description": "Primary weapon ability."
+					},
+					"abilities": {
+						"type": "object",
+						"additionalProperties": {
+							"$ref": "#/components/schemas/Ability"
+						},
+						"description": "Signature abilities keyed 1-4."
+					}
+				}
+			},
+			"HeroesData": {
+				"type": "object",
+				"properties": {
+					"_metadata": {
+						"$ref": "#/components/schemas/Metadata"
+					},
+					"heroes": {
+						"type": "object",
+						"additionalProperties": {
+							"$ref": "#/components/schemas/Hero"
+						},
+						"description": "Heroes keyed by numeric id."
+					}
+				}
+			},
+			"VersionEntry": {
+				"type": "object",
+				"properties": {
+					"build_id": {
+						"type": "string"
+					},
+					"captured_at": {
+						"type": "string",
+						"format": "date-time"
+					},
+					"manifests": {
+						"type": "object",
+						"additionalProperties": {
+							"type": "string"
+						}
+					},
+					"items_count": {
+						"type": "integer"
+					},
+					"heroes_count": {
+						"type": "integer"
+					},
+					"items_hash": {
+						"type": "string",
+						"description": "SHA-256 of the items payload (metadata excluded)."
+					},
+					"heroes_hash": {
+						"type": "string",
+						"description": "SHA-256 of the heroes payload (metadata excluded)."
+					}
+				}
+			},
+			"Error": {
+				"type": "object",
+				"properties": {
+					"error": {
+						"type": "string"
+					}
+				}
+			}
+		},
+		"responses": {
+			"NotFound": {
+				"description": "The requested resource was not found.",
+				"content": {
+					"application/json": {
+						"schema": {
+							"$ref": "#/components/schemas/Error"
+						},
+						"example": {
+							"error": "Item '999' not found"
+						}
+					}
+				}
+			},
+			"InternalError": {
+				"description": "Something went wrong on the server.",
+				"content": {
+					"application/json": {
+						"schema": {
+							"$ref": "#/components/schemas/Error"
+						},
+						"example": {
+							"error": "Internal server error"
+						}
+					}
+				}
+			}
+		}
+	}
+}

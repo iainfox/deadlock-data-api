@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Deadlock Data API, Documentation</title>
+	<meta name="description"
+		content="API reference for the Deadlock Data API: items, heroes and version history, generated from the OpenAPI spec.">
+	<link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+	<header class="site-header">
+		<a class="brand" href="/">Deadlock Data</a>
+		<nav class="nav" aria-label="Main navigation">
+			<a class="nav-link" href="https://github.com/iainfox/deadlock-data-api" target="_blank"
+				rel="noopener noreferrer">Repo</a>
+			<a class="nav-link" href="/playground.html">Playground</a>
+			<a class="nav-link active" href="/docs.html">Docs</a>
+		</nav>
+	</header>
+
+	<main class="docs">
+		<aside class="docs-sidebar">
+			<nav class="docs-nav" aria-label="Documentation sections">
+				<p class="docs-nav-title">Contents</p>
+				<ol id="docs-nav-list">
+					<li><a href="#getting-started">Getting started</a></li>
+					<li><a href="#how-it-works">How it works</a></li>
+					<li><a href="#data-model">Data model</a></li>
+					<li><a href="#items">Items</a></li>
+					<li><a href="#heroes">Heroes</a></li>
+					<li><a href="#versions">Versions</a></li>
+					<li><a href="#playground">Playground</a></li>
+				</ol>
+			</nav>
+		</aside>
+
+		<div class="docs-content">
+			<h1 class="docs-title">Documentation</h1>
+			<p class="docs-intro" id="docs-intro">
+				The Deadlock Data API serves item, hero and build-version data for Deadlock,
+				extracted nightly from the game's files. This page covers the pipeline, the
+				data shapes, and a full endpoint reference generated from the
+				<a class="link" href="/openapi.json">OpenAPI spec</a>.
+			</p>
+
+			<section class="doc-section" id="getting-started">
+				<h2>Getting started</h2>
+				<p>Every endpoint returns JSON and requires no authentication:</p>
+				<pre
+					class="code-block"><code>curl https://deadlock-data-api.iainfox.dev/items/5</code></pre>
+				<p>
+					Grab the whole dataset with <code>GET /items</code> or
+					<code>GET /heroes</code>, or look things up individually with
+					<code>GET /items/:id</code> and <code>GET /heroes/:id</code>. Responses are
+					cached at the edge for 5 minutes.
+				</p>
+				<p class="doc-note">
+					Lookups accept the numeric id, the numeric <code>hero_id</code>, or a
+					url-slugged display name (<code>/heroes/seven</code>). Every dataset carries
+					a <code>_metadata</code> object with the <code>build_id</code> it was captured
+					from, so you always know exactly which game version you're looking at.
+				</p>
+			</section>
+
+			<section class="doc-section" id="how-it-works">
+				<h2>How it works</h2>
+				<p>
+					Data flows from the game itself to a JSON API with no manual steps. A
+					scheduled GitHub Actions workflow runs daily:
+				</p>
+				<pre class="code-block"><code>SteamCMD (check manifests)
+		│  changed?
+		▼
+DepotDownloader (fetch windows depots 1422451/52/56)
+		│
+		▼
+Source2Viewer-CLI (decompile VPKs to text)
+		│
+		▼
+custom KV3 parser (items / heroes / abilities)
+		│
+		▼
+JSON + versioned archive → Cloudflare R2 → this API</code></pre>
+				<p>
+					If the depot manifests are unchanged, the pipeline skips the download and
+					just confirms the previous data is still current. When they do change, the
+					new build is uploaded as the live dataset <em>and</em> archived under
+					<code>archive/&lt;build_id&gt;</code>, so you can diff any two versions.
+				</p>
+			</section>
+
+			<section class="doc-section" id="data-model">
+				<h2>Data model</h2>
+				<p>Two top-level datasets are served:</p>
+				<ul>
+					<li><code>items_data.json</code>: items keyed by their numeric id, with tier, soul cost, slot,
+						activation, availability and all ability stats.</li>
+					<li><code>heroes_data.json</code>: heroes keyed by their numeric id, with starting stats, per-level
+						scaling, tags, primary weapon and signature abilities.</li>
+				</ul>
+				<p>
+					Tier is 0-5 and maps to soul costs
+					<code>[0, 800, 1600, 3200, 6400, 9999]</code>. Stats are keyed by the game's
+					internal property names; promoted keys such as
+					<code>cooldown</code>, <code>duration</code>, <code>cast_range</code> and
+					<code>charges</code> are lifted to the top level of each record.
+				</p>
+			</section>
+
+			<div id="api-reference">
+				<div class="doc-note">Loading API reference from <code>/openapi.json</code>…</div>
+			</div>
+
+			<section class="doc-section" id="playground">
+				<h2>Playground</h2>
+				<p>
+					The playground reads the same OpenAPI spec this page uses, so every endpoint
+					listed above is available as a live, clickable request.
+				</p>
+				<p>
+					<a class="link" href="/playground.html">Open the playground →</a>
+				</p>
+			</section>
+		</div>
+	</main>
+
+	<footer class="site-footer">
+		<span>Deadlock Data API. an open source data extractor and API</span>
+		<span>Not affiliated with Valve. Deadlock is a trademark of Valve Corporation.</span>
+		<a class="link" href="https://github.com/iainfox/deadlock-data-api" target="_blank"
+			rel="noopener noreferrer">github.com/iainfox/deadlock-data-api</a>
+		<span>Made by <a class="link" href="https://iainfox.dev" target="_blank" rel="noopener noreferrer">Iain Fox</a></span>
+	</footer>
+	<script src="docs.js" defer></script>
+</body>
+
+</html>

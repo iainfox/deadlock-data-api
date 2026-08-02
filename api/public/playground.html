@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Deadlock Data API, Playground</title>
+	<meta name="description" content="Test the live Deadlock Data API in your browser.">
+	<link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+	<header class="site-header">
+		<a class="brand" href="/">Deadlock Data</a>
+		<nav class="nav" aria-label="Main navigation">
+			<a class="nav-link" href="https://github.com/iainfox/deadlock-data-api" target="_blank"
+				rel="noopener noreferrer">Repo</a>
+			<a class="nav-link active" href="/playground.html">Playground</a>
+			<a class="nav-link" href="/docs.html">Docs</a>
+		</nav>
+	</header>
+
+	<main class="playground">
+		<div class="pg-head">
+			<h1 class="pg-title">Playground</h1>
+			<p class="pg-subtitle" id="pg-subtitle">Loading the API spec…</p>
+		</div>
+
+		<aside class="pg-panel">
+			<p class="pg-panel-title">Endpoints</p>
+			<nav class="pg-list" id="pg-list" aria-label="API endpoints"></nav>
+		</aside>
+
+		<div class="pg-columns">
+			<section class="pg-panel">
+				<p class="pg-panel-title">Request</p>
+				<div class="pg-request-body">
+					<div class="pg-url-bar" id="pg-url"></div>
+
+					<div class="pg-params" id="pg-params"></div>
+
+					<div class="pg-actions">
+						<button class="btn" id="pg-send" type="button">Send</button>
+						<div class="snippet-toggle" id="pg-snippet-toggle" hidden>
+							<button type="button" data-kind="curl" class="active">curl</button>
+							<button type="button" data-kind="fetch">fetch</button>
+						</div>
+						<button class="btn-ghost btn" id="pg-copy" type="button" hidden>Copy code</button>
+					</div>
+
+					<pre class="code-block snippet-box visible"
+						id="pg-snippet-curl"><code id="pg-code-curl"></code></pre>
+					<pre class="code-block snippet-box" id="pg-snippet-fetch"><code id="pg-code-fetch"></code></pre>
+				</div>
+			</section>
+
+			<section class="pg-panel">
+				<p class="pg-panel-title">Response</p>
+				<div class="pg-response-body">
+					<div class="pg-response-meta">
+						<span class="status-badge" id="pg-status">—</span>
+						<span class="pg-meta-item" id="pg-latency"></span>
+						<span class="pg-meta-item" id="pg-size"></span>
+					</div>
+					<pre class="pg-body"
+						id="pg-body"><span class="pg-empty">Select an endpoint and hit Send.</span></pre>
+				</div>
+			</section>
+		</div>
+	</main>
+
+	<footer class="site-footer">
+		<span>Deadlock Data API. an open source data extractor and API</span>
+		<span>Not affiliated with Valve. Deadlock is a trademark of Valve Corporation.</span>
+		<a class="link" href="https://github.com/iainfox/deadlock-data-api" target="_blank"
+			rel="noopener noreferrer">github.com/iainfox/deadlock-data-api</a>
+		<span>Made by <a class="link" href="https://iainfox.dev" target="_blank" rel="noopener noreferrer">Iain Fox</a></span>
+	</footer>
+	<script src="playground.js" defer></script>
+</body>
+
+</html>

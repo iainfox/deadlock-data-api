@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Deadlock Data API</title>
+	<meta name="description"
+		content="Up-to-date item and hero data for Deadlock, extracted nightly from the game's own files and served as an open JSON API.">
+	<link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+	<header class="site-header">
+		<a class="brand" href="/">Deadlock Data API</a>
+		<nav class="nav" aria-label="Main navigation">
+			<a class="nav-link" href="https://github.com/iainfox/deadlock-data-api" target="_blank"
+				rel="noopener noreferrer">Repo</a>
+			<a class="nav-link" href="/playground.html">Playground</a>
+			<a class="nav-link" href="/docs.html">Docs</a>
+		</nav>
+	</header>
+
+	<main class="landing">
+		<section class="hero-wrap">
+			<div class="hero">
+				<span class="hero-badge">Open JSON API · updated nightly</span>
+				<h1 class="hero-title">Deadlock<br>Data API</h1>
+				<p class="hero-description">
+					Data for Deadlock, extracted straight from the game's
+					VPK files. Every patch is archived and diffable, and the whole thing is
+					served as a free, cache-friendly JSON API on Cloudflare.
+				</p>
+				<div class="hero-links">
+					<a class="link" href="/playground.html">Try the API →</a>
+					<a class="link" href="/docs.html">Read the docs →</a>
+				</div>
+			</div>
+			<div class="hero-shot" aria-hidden="true">
+				<pre><code><span class="tk-punc">{</span>
+  <span class="tk-key">"id"</span><span class="tk-punc">:</span> <span class="tk-str">"5"</span><span class="tk-punc">,</span>
+  <span class="tk-key">"name"</span><span class="tk-punc">:</span> <span class="tk-str">"Headshot Booster"</span><span class="tk-punc">,</span>
+  <span class="tk-key">"tier"</span><span class="tk-punc">:</span> <span class="tk-num">1</span><span class="tk-punc">,</span>
+  <span class="tk-key">"cost"</span><span class="tk-punc">:</span> <span class="tk-num">800</span><span class="tk-punc">,</span>
+  <span class="tk-key">"slot"</span><span class="tk-punc">:</span> <span class="tk-str">"Weapon"</span><span class="tk-punc">,</span>
+  <span class="tk-key">"stats"</span><span class="tk-punc">:</span> <span class="tk-punc">{</span>
+	<span class="tk-key">"BulletDamage"</span><span class="tk-punc">:</span> <span class="tk-punc">{</span>
+	  <span class="tk-key">"value"</span><span class="tk-punc">:</span> <span class="tk-num">0.08</span>
+	<span class="tk-punc">}</span>
+  <span class="tk-punc">}</span>
+<span class="tk-punc">}</span></code></pre>
+			</div>
+		</section>
+
+		<section class="section">
+			<h2 class="section-title">The extractor</h2>
+			<p class="section-text">
+				A small pipeline that runs nightly on GitHub Actions, downloads the game's
+				current depot manifests, and rebuilds the datasets whenever anything changed.
+			</p>
+			<ul class="section-list">
+				<li>SteamCMD checks the live depot manifests for the game's windows builds</li>
+				<li>Source2Viewer-CLI decompiles the VPK archives into text</li>
+				<li>A custom KV3 parser pulls out every item, hero, stat and ability</li>
+				<li>JSON goes up to Cloudflare R2</li>
+			</ul>
+			<a class="link" href="https://github.com/iainfox/deadlock-data-api" target="_blank"
+				rel="noopener noreferrer">Source on GitHub →</a>
+		</section>
+
+		<section class="section">
+			<h2 class="section-title">The API</h2>
+			<p class="section-text">
+				Every endpoint returns plain JSON, keyed by the game's ids, with build
+				provenance attached via <code>_metadata</code>. No auth, no rate limits, and
+				responses are cached at the edge.
+			</p>
+			<ul class="section-list">
+				<li><code>/items</code> and <code>/heroes</code> - the full latest datasets</li>
+				<li><code>/items/:id</code> and <code>/heroes/:id</code> - single-record lookup</li>
+				<li><code>/versions</code> - history of every archived build</li>
+			</ul>
+			<a class="link" href="/docs.html">Full reference →</a>
+		</section>
+
+		<section class="section">
+			<h2 class="section-title">Playground</h2>
+			<p class="section-text">
+				Fire requests at the live API straight from the browser. Pick an endpoint, fill
+				in the parameters, and inspect the response.
+			</p>
+			<a class="link" href="/playground.html">Open the playground →</a>
+		</section>
+	</main>
+
+	<footer class="site-footer">
+		<span>Deadlock Data API. an open source data extractor and API</span>
+		<span>Not affiliated with Valve. Deadlock is a trademark of Valve Corporation.</span>
+		<a class="link" href="https://github.com/iainfox/deadlock-data-api" target="_blank"
+			rel="noopener noreferrer">github.com/iainfox/deadlock-data-api</a>
+		<span>Made by <a class="link" href="https://iainfox.dev" target="_blank" rel="noopener noreferrer">Iain Fox</a></span>
+	</footer>
+</body>
+
+</html>
