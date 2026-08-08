@@ -79,6 +79,12 @@ jobs:
           gh release download --repo ValveResourceFormat/ValveResourceFormat --pattern "cli-windows-x64.zip" --dir tools/vrf
           Expand-Archive -LiteralPath "tools/vrf/cli-windows-x64.zip" -DestinationPath "tools/vrf" -Force
 
+      - name: Fetch existing archive index (preserve build history)
+        continue-on-error: true
+        run: |
+          New-Item -ItemType Directory -Path "archive" -Force | Out-Null
+          npx --yes wrangler r2 object get "${{ env.R2_BUCKET }}/archive/index.json" --file "archive/index.json" --remote
+
       - name: Download changed depots, extract, build JSON
         env:
           STEAMCMD_PATH: ${{ github.workspace }}\tools\steamcmd\steamcmd.exe
